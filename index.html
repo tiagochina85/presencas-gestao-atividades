@@ -3,31 +3,36 @@
 <html lang="pt">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Presenças – Gestão de Atividades</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Presenças - Gestão de Atividades</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-body{font-family:Arial,sans-serif;background:#f2f5f3;margin:0;color:#26382e}
+body{font-family:Arial;background:#f2f5f3;margin:0;color:#26382e}
 header{background:#174b3b;color:white;padding:20px}
-main{max-width:850px;margin:25px auto;padding:15px}
-.card{background:white;padding:20px;border-radius:12px;margin-bottom:18px;box-shadow:0 2px 10px #0001}
-h1,h2{margin-top:0}
-input,select,button{box-sizing:border-box;padding:12px;border-radius:7px;font-size:16px;margin:6px 0}
-input,select{width:100%;border:1px solid #ccc;background:white}
+main{max-width:900px;margin:20px auto;padding:12px}
+.card{background:white;padding:20px;border-radius:12px;margin-bottom:18px;box-shadow:0 2px 9px #0001}
+input,select,button{padding:12px;border-radius:7px;font-size:15px;margin:5px 0;box-sizing:border-box}
+input,select{width:100%;border:1px solid #ccc}
 button{border:0;background:#174b3b;color:white;cursor:pointer}
-button.secondary{background:#687b70}
-button:disabled{opacity:.5}
-label.person{display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid #eee}
-label.person input{width:22px;height:22px;margin:0}
-.small{color:#637168;font-size:14px}
+.secondary{background:#687b70}
+.person{padding:13px 0;border-bottom:1px solid #eee}
+.person-name{font-weight:bold;margin-bottom:8px}
+.choices{display:flex;gap:6px;flex-wrap:wrap}
+.choices button{flex:1;min-width:100px;background:#e8ece9;color:#26382e}
+.choices .selected.presenca{background:#16834b;color:white}
+.choices .selected.falta{background:#bd3030;color:white}
+.choices .selected.justificada{background:#bd7900;color:white}
+.activity-check{display:block;padding:7px}
+.activity-check input{width:auto}
 #app{display:none}
 #message{white-space:pre-wrap;margin:12px 0}
+.small{color:#68766d;font-size:13px}
 </style>
 </head>
 <body>
 <header>
 <h1>Presenças</h1>
-<div>Gestão de Atividades</div>
+Gestão de Atividades
 </header>
 <main>
 <section id="login" class="card">
@@ -45,194 +50,237 @@ label.person input{width:22px;height:22px;margin:0}
 </div>
 
 <section id="adminBox" class="card" style="display:none">
-<h2>Adicionar participante</h2>
-<input id="newParticipant" placeholder="Nome completo do participante">
-<button onclick="addParticipant()">Adicionar participante</button>
+<h2>Gestão de utentes</h2>
+<p class="small">Adicione o nome do utente e escolha as atividades em que está inscrito.</p>
+<input id="newName" placeholder="Nome completo do utente">
+<div id="activityChecks"></div>
+<button onclick="addParticipant()">Guardar utente e inscrições</button>
 </section>
 
 <div class="card">
-<h2>Registar presenças</h2>
+<h2>Registo de presenças</h2>
 <label>Atividade</label>
-<select id="activity" onchange="loadAttendance()"></select>
+<select id="activity" onchange="loadPeople()"></select>
 <label>Data</label>
-<input type="date" id="attendanceDate" onchange="loadAttendance()">
-<p class="small">Assinale os participantes presentes. Os restantes serão registados como ausentes.</p>
-<div id="people">A carregar participantes...</div>
+<input type="date" id="attendanceDate" onchange="loadPeople()">
+<div id="people">A carregar...</div>
 <button onclick="saveAttendance()">Guardar presenças</button>
 </div>
 
 <div class="card">
-<h2>Histórico de presenças</h2>
-<p class="small">Escolha uma atividade e uma data acima para consultar ou corrigir os registos desse dia.</p>
-<button class="secondary" onclick="loadAttendance()">Consultar registos</button>
+<h2>Histórico</h2>
+<p class="small">Selecione uma atividade e uma data para consultar ou corrigir os registos.</p>
+<button class="secondary" onclick="loadPeople()">Consultar histórico</button>
 </div>
 </section>
 <div id="message"></div>
 </main>
 
 <script>
-const SUPABASE_URL="https://qkliymptliwfuqrajtuo.supabase.co";
-const SUPABASE_KEY="sb_publishable_OenVWVbVkhzurI7PAURaAg_bA2dgA9i";
-const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const URL="https://qkliymptliwfuqrajtuo.supabase.co";
+const KEY="sb_publishable_OenVWVbVkhzurI7PAURaAg_bA2dgA9i";
+const db=window.supabase.createClient(URL,KEY);
 
-let currentUser=null;
-let currentProfile=null;
-let participants=[];
+let user=null,profile=null,activities=[],people=[],states={};
 
-function msg(text){document.getElementById("message").textContent=text;}
-
+function message(t){document.getElementById("message").textContent=t;}
 function today(){
  const d=new Date();
  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 }
 
 async function login(){
- msg("A verificar os dados...");
+ message("A verificar...");
  const {data,error}=await db.auth.signInWithPassword({
   email:document.getElementById("email").value.trim(),
   password:document.getElementById("password").value
  });
- if(error){msg("Erro ao entrar: "+error.message);return;}
- await showProfile(data.user);
+ if(error){message("Erro: "+error.message);return;}
+ await start(data.user);
 }
 
-async function showProfile(user){
- currentUser=user;
- const {data:profile,error}=await db.from("profiles")
-  .select("full_name,role").eq("id",user.id).single();
-
- if(error||!profile){msg("Não foi possível consultar o perfil: "+(error?.message||"perfil não encontrado"));return;}
-
- currentProfile=profile;
+async function start(u){
+ user=u;
+ const {data:p,error}=await db.from("profiles")
+  .select("full_name,role").eq("id",u.id).single();
+ if(error){message("Erro ao consultar perfil: "+error.message);return;}
+ profile=p;
  document.getElementById("login").style.display="none";
  document.getElementById("app").style.display="block";
- document.getElementById("userName").textContent=profile.full_name||user.email;
- document.getElementById("userRole").textContent=profile.role==="admin"?"Administrador":"Colaborador";
- document.getElementById("adminBox").style.display=profile.role==="admin"?"block":"none";
+ document.getElementById("userName").textContent=p.full_name||u.email;
+ document.getElementById("userRole").textContent=p.role==="admin"?"Administrador":"Colaborador";
+ document.getElementById("adminBox").style.display=p.role==="admin"?"block":"none";
  document.getElementById("attendanceDate").value=today();
  await loadActivities();
 }
 
 async function loadActivities(){
- msg("A carregar atividades...");
- const {data:acts,error}=await db.from("activities")
+ const {data:a,error}=await db.from("activities")
   .select("id,name").eq("active",true).order("name");
- if(error){msg("Erro ao carregar atividades: "+error.message);return;}
+ if(error){message("Erro ao carregar atividades: "+error.message);return;}
+ activities=a||[];
 
- let allowed=acts||[];
- if(currentProfile.role!=="admin"){
-  const {data:assignments,error:assignError}=await db.from("activity_assignments")
-   .select("activity_id").eq("user_id",currentUser.id);
-  if(assignError){msg("Erro ao consultar permissões: "+assignError.message);return;}
-  const ids=(assignments||[]).map(x=>x.activity_id);
-  allowed=allowed.filter(a=>ids.includes(a.id));
+ let allowed=activities;
+ if(profile.role!=="admin"){
+  const {data:assign,error:e}=await db.from("activity_assignments")
+   .select("activity_id").eq("user_id",user.id);
+  if(e){message("Erro nas permissões: "+e.message);return;}
+  const ids=(assign||[]).map(x=>x.activity_id);
+  allowed=activities.filter(x=>ids.includes(x.id));
  }
 
- const select=document.getElementById("activity");
- select.innerHTML="";
+ const sel=document.getElementById("activity");
+ sel.innerHTML="";
  allowed.forEach(a=>{
-  const option=document.createElement("option");
-  option.value=a.id;
-  option.textContent=a.name;
-  select.appendChild(option);
+  const o=document.createElement("option");
+  o.value=a.id;o.textContent=a.name;sel.appendChild(o);
  });
 
- if(!allowed.length){document.getElementById("people").textContent="Não existem atividades atribuídas a esta conta.";msg("");return;}
- await loadAttendance();
+ if(profile.role==="admin")buildActivityChecks();
+ if(!allowed.length){message("Não tem atividades atribuídas.");return;}
+ await loadPeople();
 }
 
-async function loadAttendance(){
+function buildActivityChecks(){
+ const box=document.getElementById("activityChecks");
+ box.innerHTML="<p><strong>Atividades:</strong></p>";
+ activities.forEach(a=>{
+  const label=document.createElement("label");
+  label.className="activity-check";
+  const input=document.createElement("input");
+  input.type="checkbox";input.value=a.id;
+  label.appendChild(input);
+  label.appendChild(document.createTextNode(" "+a.name));
+  box.appendChild(label);
+ });
+}
+
+async function addParticipant(){
+ const name=document.getElementById("newName").value.trim();
+ const chosen=[...document.querySelectorAll("#activityChecks input:checked")].map(x=>x.value);
+ if(!name){message("Escreva o nome do utente.");return;}
+ if(!chosen.length){message("Selecione pelo menos uma atividade.");return;}
+
+ message("A guardar utente...");
+ const {data:p,error}=await db.from("participants")
+  .insert({full_name:name,active:true}).select("id").single();
+ if(error){message("Erro ao criar utente: "+error.message);return;}
+
+ const rows=chosen.map(id=>({participant_id:p.id,activity_id:id}));
+ const {error:e}=await db.from("activity_participants").insert(rows);
+ if(e){message("O utente foi criado, mas houve um erro nas inscrições: "+e.message);return;}
+
+ document.getElementById("newName").value="";
+ document.querySelectorAll("#activityChecks input").forEach(x=>x.checked=false);
+ message("Utente e inscrições guardados com sucesso.");
+ await loadPeople();
+}
+
+async function loadPeople(){
  const activityId=document.getElementById("activity").value;
  const date=document.getElementById("attendanceDate").value;
  if(!activityId||!date)return;
 
- document.getElementById("people").textContent="A carregar...";
- const {data:people,error}=await db.from("participants")
-  .select("id,full_name").eq("active",true).order("full_name");
+ document.getElementById("people").textContent="A carregar utentes...";
+ const {data:links,error}=await db.from("activity_participants")
+  .select("participant_id").eq("activity_id",activityId);
+ if(error){message("Erro ao consultar inscrições: "+error.message);return;}
 
- if(error){msg("Erro ao carregar participantes: "+error.message);return;}
- participants=people||[];
+ const ids=(links||[]).map(x=>x.participant_id);
+ people=[];
+ if(ids.length){
+  const {data:p,error:e}=await db.from("participants")
+   .select("id,full_name").in("id",ids).eq("active",true).order("full_name");
+  if(e){message("Erro ao carregar utentes: "+e.message);return;}
+  people=p||[];
+ }
 
- const {data:records,error:recordError}=await db.from("attendance")
-  .select("participant_id,present")
+ const {data:records,error:r}=await db.from("attendance")
+  .select("participant_id,present,status")
   .eq("activity_id",activityId).eq("attendance_date",date);
+ if(r){message("Erro ao consultar histórico: "+r.message);return;}
 
- if(recordError){msg("Erro ao consultar presenças: "+recordError.message);return;}
-
- const saved={};
- (records||[]).forEach(r=>saved[r.participant_id]=r.present);
-
- const container=document.getElementById("people");
- container.innerHTML="";
- if(!participants.length){container.textContent="Ainda não existem participantes. O administrador pode adicioná-los acima.";msg("");return;}
-
- participants.forEach(p=>{
-  const label=document.createElement("label");
-  label.className="person";
-  const checkbox=document.createElement("input");
-  checkbox.type="checkbox";
-  checkbox.dataset.id=p.id;
-  checkbox.checked=saved[p.id]===true;
-  const name=document.createElement("span");
-  name.textContent=p.full_name;
-  label.appendChild(checkbox);
-  label.appendChild(name);
-  container.appendChild(label);
+ states={};
+ (records||[]).forEach(x=>{
+  states[x.participant_id]=x.status||
+   (x.present?"presenca":"falta");
  });
- msg("Registos carregados. Pode marcar ou corrigir as presenças.");
+
+ renderPeople();
+ message(people.length?"Utentes carregados. Pode registar ou corrigir.":"Ainda não existem utentes inscritos nesta atividade.");
+}
+
+function renderPeople(){
+ const box=document.getElementById("people");
+ box.innerHTML="";
+ if(!people.length){
+  box.textContent="Não existem utentes inscritos nesta atividade.";
+  return;
+ }
+ people.forEach(p=>{
+  if(!states[p.id])states[p.id]="falta";
+  const row=document.createElement("div");
+  row.className="person";
+  const name=document.createElement("div");
+  name.className="person-name";
+  name.textContent=p.full_name;
+  const choices=document.createElement("div");
+  choices.className="choices";
+
+  [
+   ["presenca","Presença"],
+   ["falta","Falta"],
+   ["falta_justificada","Falta justificada"]
+  ].forEach(([value,label])=>{
+   const b=document.createElement("button");
+   b.textContent=label;
+   const css=value==="falta_justificada"?"justificada":value;
+   if(states[p.id]===value)b.className="selected "+css;
+   b.onclick=()=>{
+    states[p.id]=value;
+    renderPeople();
+   };
+   choices.appendChild(b);
+  });
+  row.appendChild(name);
+  row.appendChild(choices);
+  box.appendChild(row);
+ });
 }
 
 async function saveAttendance(){
  const activityId=document.getElementById("activity").value;
  const date=document.getElementById("attendanceDate").value;
- if(!activityId||!date){msg("Escolha uma atividade e uma data.");return;}
+ if(!activityId||!date||!people.length){message("Não existem dados para guardar.");return;}
 
- const rows=Array.from(document.querySelectorAll("#people input[type=checkbox]")).map(c=>({
-  participant_id:c.dataset.id,
+ const rows=people.map(p=>({
+  participant_id:p.id,
   activity_id:activityId,
   attendance_date:date,
-  present:c.checked,
-  created_by:currentUser.id
+  status:states[p.id],
+  present:states[p.id]==="presenca",
+  created_by:user.id
  }));
-
- if(!rows.length){msg("Não existem participantes para guardar.");return;}
- msg("A guardar presenças...");
-
+ message("A guardar...");
  const {error}=await db.from("attendance").upsert(rows,{
   onConflict:"participant_id,activity_id,attendance_date"
  });
- if(error){msg("Não foi possível guardar: "+error.message);return;}
- msg("Presenças guardadas com sucesso. Pode voltar a esta data para consultar ou corrigir.");
-}
-
-async function addParticipant(){
- if(currentProfile.role!=="admin"){msg("Só o administrador pode adicionar participantes.");return;}
- const name=document.getElementById("newParticipant").value.trim();
- if(!name){msg("Escreva o nome do participante.");return;}
-
- const {error}=await db.from("participants").insert({
-  full_name:name,active:true
- });
- if(error){msg("Erro ao adicionar participante: "+error.message);return;}
-
- document.getElementById("newParticipant").value="";
- msg("Participante adicionado com sucesso.");
- await loadAttendance();
+ if(error){message("Erro ao guardar: "+error.message);return;}
+ message("Presenças guardadas com sucesso.");
 }
 
 async function logout(){
  await db.auth.signOut();
- currentUser=null;
- currentProfile=null;
+ user=null;profile=null;
  document.getElementById("app").style.display="none";
  document.getElementById("login").style.display="block";
  document.getElementById("password").value="";
- msg("Sessão terminada.");
+ message("Sessão terminada.");
 }
 
 async function checkSession(){
  const {data}=await db.auth.getSession();
- if(data.session)await showProfile(data.session.user);
+ if(data.session)await start(data.session.user);
 }
 checkSession();
 </script>
