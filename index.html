@@ -1,418 +1,622 @@
 
-const SUPABASE_URL = "https://qkliymptliwfuqrajtuo.supabase.co";
-const SUPABASE_KEY = "COLE_AQUI_A_CHAVE_PUBLISHABLE_COMPLETA";
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Presenças – Gestão de Atividades</title>
 
-const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-let user = null;
-let profile = null;
-let activities = [];
-let people = [];
-let states = {};
+  <style>
+    * { box-sizing: border-box; }
 
-function message(t) {
-  document.getElementById("message").textContent = t;
-}
-
-function today() {
-  const d = new Date();
-  return d.getFullYear() + "-" +
-    String(d.getMonth() + 1).padStart(2, "0") + "-" +
-    String(d.getDate()).padStart(2, "0");
-}
-
-async function handleLogin() {
-  try {
-    message("A verificar...");
-
-    const email = document.getElementById("email").value.trim();
-    const password = document.getElementById("password").value;
-
-    const { data, error } = await db.auth.signInWithPassword({
-      email,
-      password
-    });
-
-    if (error) {
-      message("Erro ao entrar: " + error.message);
-      return;
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background: #f3f5f8;
+      color: #222;
     }
 
-    await start(data.user);
-
-  } catch (error) {
-    message("Erro: " + error.message);
-  }
-}
-
-async function start(u) {
-  try {
-    user = u;
-
-    const { data: p, error } = await db
-      .from("profiles")
-      .select("full_name,role")
-      .eq("id", u.id)
-      .single();
-
-    if (error) {
-      message("Erro ao consultar perfil: " + error.message);
-      return;
+    .container {
+      max-width: 950px;
+      margin: 0 auto;
     }
 
-    profile = p;
+    h1 { color: #174b72; }
 
-    document.getElementById("login").style.display = "none";
-    document.getElementById("app").style.display = "block";
-    document.getElementById("userName").textContent =
-      p.full_name || u.email;
-    document.getElementById("userRole").textContent =
-      p.role === "admin" ? "Administrador" : "Colaborador";
-    document.getElementById("adminBox").style.display =
-      p.role === "admin" ? "block" : "none";
-
-    document.getElementById("attendanceDate").value = today();
-
-    await loadActivities();
-
-  } catch (error) {
-    message("Erro ao iniciar aplicação: " + error.message);
-  }
-}
-
-async function loadActivities() {
-  try {
-    const { data: a, error } = await db
-      .from("activities")
-      .select("id,name")
-      .eq("active", true)
-      .order("name");
-
-    if (error) {
-      message("Erro ao carregar atividades: " + error.message);
-      return;
+    .painel {
+      background: white;
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px #00000012;
     }
 
-    activities = a || [];
-    let allowed = activities;
-
-    if (profile.role !== "admin") {
-      const { data: assign, error: e } = await db
-        .from("activity_assignments")
-        .select("activity_id")
-        .eq("user_id", user.id);
-
-      if (e) {
-        message("Erro nas permissões: " + e.message);
-        return;
-      }
-
-      const ids = (assign || []).map(x => x.activity_id);
-      allowed = activities.filter(x => ids.includes(x.id));
+    input, select, button {
+      font-size: 16px;
+      padding: 12px;
+      border-radius: 7px;
     }
 
-    const sel = document.getElementById("activity");
-    sel.innerHTML = "";
-
-    allowed.forEach(a => {
-      const o = document.createElement("option");
-      o.value = a.id;
-      o.textContent = a.name;
-      sel.appendChild(o);
-    });
-
-    if (profile.role === "admin") {
-      buildActivityChecks();
+    input, select {
+      border: 1px solid #bbb;
+      width: 100%;
+      margin: 7px 0 14px;
+      background: white;
     }
 
-    if (!allowed.length) {
-      message("Não tem atividades atribuídas.");
-      return;
+    button {
+      border: 0;
+      cursor: pointer;
+      font-weight: bold;
     }
 
-    await loadPeople();
-
-  } catch (error) {
-    message("Erro nas atividades: " + error.message);
-  }
-}
-
-function buildActivityChecks() {
-  const box = document.getElementById("activityChecks");
-  box.innerHTML = "<p><strong>Atividades:</strong></p>";
-
-  activities.forEach(a => {
-    const label = document.createElement("label");
-    label.className = "activity-check";
-
-    const input = document.createElement("input");
-    input.type = "checkbox";
-    input.value = a.id;
-
-    label.appendChild(input);
-    label.appendChild(document.createTextNode(" " + a.name));
-    box.appendChild(label);
-  });
-}
-
-async function addParticipant() {
-  try {
-    const name = document.getElementById("newName").value.trim();
-
-    const chosen = [
-      ...document.querySelectorAll("#activityChecks input:checked")
-    ].map(x => x.value);
-
-    if (!name) {
-      message("Escreva o nome do utente.");
-      return;
+    button:disabled {
+      opacity: .5;
+      cursor: not-allowed;
     }
 
-    if (!chosen.length) {
-      message("Selecione pelo menos uma atividade.");
-      return;
+    .botao-principal {
+      background: #176b9b;
+      color: white;
+      width: 100%;
     }
 
-    message("A guardar utente...");
-
-    const { data: p, error } = await db
-      .from("participants")
-      .insert({ full_name: name, active: true })
-      .select("id")
-      .single();
-
-    if (error) {
-      message("Erro ao criar utente: " + error.message);
-      return;
+    .botao-sair {
+      background: #777;
+      color: white;
+      float: right;
     }
 
-    const rows = chosen.map(id => ({
-      participant_id: p.id,
-      activity_id: id
-    }));
-
-    const { error: e } = await db
-      .from("activity_participants")
-      .insert(rows);
-
-    if (e) {
-      message("Utente criado, mas houve erro nas inscrições: " + e.message);
-      return;
+    .participante {
+      padding: 14px;
+      border: 1px solid #ddd;
+      border-radius: 9px;
+      margin: 12px 0;
+      background: #fff;
     }
 
-    document.getElementById("newName").value = "";
-
-    document.querySelectorAll("#activityChecks input").forEach(x => {
-      x.checked = false;
-    });
-
-    message("Utente e inscrições guardados com sucesso.");
-    await loadPeople();
-
-  } catch (error) {
-    message("Erro ao guardar utente: " + error.message);
-  }
-}
-
-async function loadPeople() {
-  try {
-    const activityId = document.getElementById("activity").value;
-    const date = document.getElementById("attendanceDate").value;
-
-    if (!activityId || !date) return;
-
-    document.getElementById("people").textContent = "A carregar utentes...";
-
-    const { data: links, error } = await db
-      .from("activity_participants")
-      .select("participant_id")
-      .eq("activity_id", activityId);
-
-    if (error) {
-      message("Erro ao consultar inscrições: " + error.message);
-      return;
+    .nome {
+      font-size: 17px;
+      font-weight: bold;
+      margin-bottom: 12px;
     }
 
-    const ids = (links || []).map(x => x.participant_id);
-    people = [];
-
-    if (ids.length) {
-      const { data: p, error: e } = await db
-        .from("participants")
-        .select("id,full_name")
-        .in("id", ids)
-        .eq("active", true)
-        .order("full_name");
-
-      if (e) {
-        message("Erro ao carregar utentes: " + e.message);
-        return;
-      }
-
-      people = p || [];
+    .botoes {
+      display: flex;
+      gap: 8px;
     }
 
-    const { data: records, error: r } = await db
-      .from("attendance")
-      .select("participant_id,present,status")
-      .eq("activity_id", activityId)
-      .eq("attendance_date", date);
-
-    if (r) {
-      message("Erro ao consultar histórico: " + r.message);
-      return;
+    .botoes button {
+      flex: 1;
+      color: white;
+      min-width: 0;
+      padding: 12px 5px;
+      font-size: 14px;
     }
 
-    states = {};
+    .presenca { background: #218838; }
+    .falta { background: #c0392b; }
+    .justificada { background: #d18a00; }
 
-    (records || []).forEach(x => {
-      states[x.participant_id] =
-        x.status || (x.present ? "presenca" : "falta");
-    });
+    .selecionado {
+      outline: 3px solid #222;
+      outline-offset: 2px;
+    }
 
-    renderPeople();
+    .mensagem {
+      padding: 12px;
+      border-radius: 7px;
+      margin: 12px 0;
+      display: none;
+      white-space: pre-wrap;
+    }
 
-    message(
-      people.length
-        ? "Utentes carregados. Pode registar ou corrigir."
-        : "Ainda não existem utentes inscritos nesta atividade."
-    );
+    .erro { background: #ffe0e0; color: #8b0000; }
+    .sucesso { background: #dff5e4; color: #155724; }
 
-  } catch (error) {
-    message("Erro ao carregar utentes: " + error.message);
-  }
-}
+    .pequeno { color: #666; font-size: 14px; }
 
-function renderPeople() {
-  const box = document.getElementById("people");
-  box.innerHTML = "";
+    .atividade-opcao {
+      display: block;
+      margin: 8px 0;
+    }
 
-  if (!people.length) {
-    box.textContent = "Não existem utentes inscritos nesta atividade.";
-    return;
+    .atividade-opcao input {
+      width: auto;
+      margin: 0 8px 0 0;
+    }
+
+    #app { display: none; }
+
+    @media (max-width: 550px) {
+      body { padding: 10px; }
+      .painel { padding: 14px; }
+      .botoes { gap: 5px; }
+      .botoes button { font-size: 12px; padding: 12px 3px; }
+    }
+  </style>
+</head>
+
+<body>
+<div class="container">
+
+  <h1>Presenças – Gestão de Atividades</h1>
+
+  <div id="mensagem" class="mensagem"></div>
+
+  <section id="login" class="painel">
+    <h2>Entrar na aplicação</h2>
+
+    <label for="email">Email</label>
+    <input id="email" type="email" placeholder="O seu email">
+
+    <label for="password">Palavra-passe</label>
+    <input id="password" type="password" placeholder="A sua palavra-passe">
+
+    <button id="entrar" class="botao-principal">Entrar</button>
+  </section>
+
+  <main id="app">
+
+    <section class="painel">
+      <button id="sair" class="botao-sair">Sair</button>
+      <h2 id="boasVindas">Bem-vindo</h2>
+      <p id="tipoConta" class="pequeno"></p>
+    </section>
+
+    <section class="painel">
+      <h2>Registar presenças</h2>
+
+      <label for="atividade">Atividade</label>
+      <select id="atividade"></select>
+
+      <label for="data">Data</label>
+      <input id="data" type="date">
+
+      <p class="pequeno">
+        Escolha uma das três opções para cada participante.
+        Pode voltar a alterar o registo mais tarde.
+      </p>
+
+      <div id="listaParticipantes">
+        Selecione uma atividade.
+      </div>
+    </section>
+
+    <section id="painelAdmin" class="painel" style="display:none">
+      <h2>Adicionar participante</h2>
+
+      <label for="nomeParticipante">Nome do participante</label>
+      <input id="nomeParticipante" type="text"
+             placeholder="Nome completo">
+
+      <p><strong>Atividades a que pertence:</strong></p>
+      <div id="listaAtividadesAdmin"></div>
+
+      <button id="adicionarParticipante" class="botao-principal">
+        Adicionar participante
+      </button>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  // CONFIGURAÇÃO DO SUPABASE
+  const SUPABASE_URL = "https://qkliymptliwfuqrajtuo.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_OenVWVbVkhzurI7PAURaAg_bA2dgA9i";
+
+  const db = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
+
+  let utilizador = null;
+  let perfil = null;
+  let atividades = [];
+  let participantes = [];
+  let registos = {};
+  let atividadeAtual = null;
+
+  const $ = id => document.getElementById(id);
+
+  function mostrarMensagem(texto, tipo = "erro") {
+    const caixa = $("mensagem");
+    caixa.textContent = texto;
+    caixa.className = "mensagem " + tipo;
+    caixa.style.display = "block";
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  people.forEach(p => {
-    if (!states[p.id]) states[p.id] = "falta";
+  function esconderMensagem() {
+    $("mensagem").style.display = "none";
+  }
 
-    const row = document.createElement("div");
-    row.className = "person";
+  function hoje() {
+    const agora = new Date();
+    const ano = agora.getFullYear();
+    const mes = String(agora.getMonth() + 1).padStart(2, "0");
+    const dia = String(agora.getDate()).padStart(2, "0");
+    return `${ano}-${mes}-${dia}`;
+  }
 
-    const name = document.createElement("div");
-    name.className = "person-name";
-    name.textContent = p.full_name;
+  async function entrar() {
+    esconderMensagem();
 
-    const choices = document.createElement("div");
-    choices.className = "choices";
+    const email = $("email").value.trim();
+    const password = $("password").value;
 
-    [
-      ["presenca", "Presença"],
-      ["falta", "Falta"],
-      ["falta_justificada", "Falta justificada"]
-    ].forEach(([value, label]) => {
-      const b = document.createElement("button");
-      b.textContent = label;
-
-      const css =
-        value === "falta_justificada" ? "justificada" : value;
-
-      if (states[p.id] === value) {
-        b.className = "selected " + css;
-      }
-
-      b.onclick = () => {
-        states[p.id] = value;
-        renderPeople();
-      };
-
-      choices.appendChild(b);
-    });
-
-    row.appendChild(name);
-    row.appendChild(choices);
-    box.appendChild(row);
-  });
-}
-
-async function saveAttendance() {
-  try {
-    const activityId = document.getElementById("activity").value;
-    const date = document.getElementById("attendanceDate").value;
-
-    if (!activityId || !date || !people.length) {
-      message("Não existem dados para guardar.");
+    if (!email || !password) {
+      mostrarMensagem("Introduza o email e a palavra-passe.");
       return;
     }
 
-    const rows = people.map(p => ({
-      participant_id: p.id,
-      activity_id: activityId,
-      attendance_date: date,
-      status: states[p.id],
-      present: states[p.id] === "presenca",
-      created_by: user.id
-    }));
+    $("entrar").disabled = true;
 
-    message("A guardar...");
-
-    const { error } = await db
-      .from("attendance")
-      .upsert(rows, {
-        onConflict: "participant_id,activity_id,attendance_date"
+    try {
+      const { data, error } = await db.auth.signInWithPassword({
+        email,
+        password
       });
 
-    if (error) {
-      message("Erro ao guardar: " + error.message);
+      if (error) throw error;
+
+      utilizador = data.user;
+
+      await carregarPerfil();
+      await carregarAtividades();
+
+      $("login").style.display = "none";
+      $("app").style.display = "block";
+      $("boasVindas").textContent =
+        "Bem-vindo" + (perfil.full_name ? ", " + perfil.full_name : "");
+
+      $("tipoConta").textContent =
+        perfil.role === "admin" ? "Administrador" : "Colaborador";
+
+      $("painelAdmin").style.display =
+        perfil.role === "admin" ? "block" : "none";
+
+      if (perfil.role === "admin") {
+        mostrarAtividadesParaAdmin();
+      }
+
+      if (atividades.length > 0) {
+        $("atividade").value = atividades[0].id;
+        await mudarAtividade();
+      } else {
+        $("listaParticipantes").textContent =
+          "Não tem atividades atribuídas.";
+      }
+
+    } catch (error) {
+      mostrarMensagem("Não foi possível entrar: " + error.message);
+    } finally {
+      $("entrar").disabled = false;
+    }
+  }
+
+  async function carregarPerfil() {
+    const { data, error } = await db
+      .from("profiles")
+      .select("*")
+      .eq("id", utilizador.id)
+      .single();
+
+    if (error) throw error;
+    if (!data) throw new Error("Não foi encontrado o perfil do utilizador.");
+
+    perfil = data;
+  }
+
+  async function carregarAtividades() {
+    if (perfil.role === "admin") {
+      const { data, error } = await db
+        .from("activities")
+        .select("*")
+        .eq("active", true)
+        .order("name");
+
+      if (error) throw error;
+      atividades = data || [];
+
+    } else {
+      const { data, error } = await db
+        .from("activity_assignments")
+        .select("activity_id, activities(id, name, active)")
+        .eq("user_id", utilizador.id);
+
+      if (error) throw error;
+
+      atividades = (data || [])
+        .map(item => item.activities)
+        .filter(item => item && item.active);
+    }
+
+    const seletor = $("atividade");
+    seletor.innerHTML = "";
+
+    atividades.forEach(atividade => {
+      const opcao = document.createElement("option");
+      opcao.value = atividade.id;
+      opcao.textContent = atividade.name;
+      seletor.appendChild(opcao);
+    });
+  }
+
+  function mostrarAtividadesParaAdmin() {
+    const caixa = $("listaAtividadesAdmin");
+    caixa.innerHTML = "";
+
+    atividades.forEach(atividade => {
+      const label = document.createElement("label");
+      label.className = "atividade-opcao";
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.value = atividade.id;
+      checkbox.className = "atividade-checkbox";
+
+      label.appendChild(checkbox);
+      label.appendChild(document.createTextNode(atividade.name));
+      caixa.appendChild(label);
+    });
+  }
+
+  async function mudarAtividade() {
+    esconderMensagem();
+
+    atividadeAtual = $("atividade").value;
+
+    if (!atividadeAtual) {
+      $("listaParticipantes").textContent = "Não há atividade selecionada.";
       return;
     }
 
-    message("Presenças guardadas com sucesso.");
+    $("listaParticipantes").textContent = "A carregar participantes...";
 
-  } catch (error) {
-    message("Erro ao guardar presenças: " + error.message);
+    try {
+      const { data, error } = await db
+        .from("activity_participants")
+        .select("participant_id, participants(id, full_name, active)")
+        .eq("activity_id", atividadeAtual);
+
+      if (error) throw error;
+
+      participantes = (data || [])
+        .map(item => item.participants)
+        .filter(item => item && item.active);
+
+      participantes.sort((a, b) =>
+        a.full_name.localeCompare(b.full_name, "pt")
+      );
+
+      await carregarRegistos();
+      desenharParticipantes();
+
+    } catch (error) {
+      mostrarMensagem("Erro ao carregar participantes: " + error.message);
+      $("listaParticipantes").textContent =
+        "Não foi possível carregar a lista.";
+    }
   }
-}
 
-async function logout() {
-  try {
+  async function carregarRegistos() {
+    registos = {};
+
+    const data = $("data").value;
+    if (!data) return;
+
+    const { data: dados, error } = await db
+      .from("attendance")
+      .select("*")
+      .eq("activity_id", atividadeAtual)
+      .eq("attendance_date", data);
+
+    if (error) throw error;
+
+    (dados || []).forEach(registo => {
+      registos[registo.participant_id] = registo.status;
+    });
+  }
+
+  function desenharParticipantes() {
+    const caixa = $("listaParticipantes");
+    caixa.innerHTML = "";
+
+    if (participantes.length === 0) {
+      caixa.textContent = "Não existem participantes nesta atividade.";
+      return;
+    }
+
+    participantes.forEach(participante => {
+      const bloco = document.createElement("div");
+      bloco.className = "participante";
+
+      const nome = document.createElement("div");
+      nome.className = "nome";
+      nome.textContent = participante.full_name;
+
+      const botoes = document.createElement("div");
+      botoes.className = "botoes";
+
+      const opcoes = [
+        { valor: "presenca", texto: "Presença", classe: "presenca" },
+        { valor: "falta", texto: "Falta", classe: "falta" },
+        {
+          valor: "falta_justificada",
+          texto: "Falta justificada",
+          classe: "justificada"
+        }
+      ];
+
+      opcoes.forEach(opcao => {
+        const botao = document.createElement("button");
+        botao.textContent = opcao.texto;
+        botao.className = opcao.classe;
+
+        if (registos[participante.id] === opcao.valor) {
+          botao.classList.add("selecionado");
+        }
+
+        botao.addEventListener("click", () =>
+          guardarPresenca(participante.id, opcao.valor, bloco)
+        );
+
+        botoes.appendChild(botao);
+      });
+
+      bloco.appendChild(nome);
+      bloco.appendChild(botoes);
+      caixa.appendChild(bloco);
+    });
+  }
+
+  async function guardarPresenca(participanteId, estado, bloco) {
+    esconderMensagem();
+
+    const data = $("data").value;
+    if (!data) {
+      mostrarMensagem("Escolha uma data.");
+      return;
+    }
+
+    const botoes = bloco.querySelectorAll("button");
+    botoes.forEach(botao => botao.disabled = true);
+
+    try {
+      const { data: existentes, error: erroConsulta } = await db
+        .from("attendance")
+        .select("id")
+        .eq("participant_id", participanteId)
+        .eq("activity_id", atividadeAtual)
+        .eq("attendance_date", data)
+        .limit(1);
+
+      if (erroConsulta) throw erroConsulta;
+
+      const registo = {
+        participant_id: participanteId,
+        activity_id: atividadeAtual,
+        attendance_date: data,
+        status: estado,
+        present: estado === "presenca",
+        created_by: utilizador.id
+      };
+
+      let resultado;
+
+      if (existentes && existentes.length > 0) {
+        resultado = await db
+          .from("attendance")
+          .update({
+            status: registo.status,
+            present: registo.present,
+            created_by: registo.created_by
+          })
+          .eq("id", existentes[0].id);
+      } else {
+        resultado = await db
+          .from("attendance")
+          .insert(registo);
+      }
+
+      if (resultado.error) throw resultado.error;
+
+      registos[participanteId] = estado;
+      desenharParticipantes();
+      mostrarMensagem("Registo guardado com sucesso.", "sucesso");
+
+    } catch (error) {
+      mostrarMensagem("Não foi possível guardar: " + error.message);
+      botoes.forEach(botao => botao.disabled = false);
+    }
+  }
+
+  async function adicionarParticipante() {
+    esconderMensagem();
+
+    const nome = $("nomeParticipante").value.trim();
+
+    const selecionadas = Array.from(
+      document.querySelectorAll(".atividade-checkbox:checked")
+    ).map(checkbox => checkbox.value);
+
+    if (!nome) {
+      mostrarMensagem("Escreva o nome do participante.");
+      return;
+    }
+
+    if (selecionadas.length === 0) {
+      mostrarMensagem("Selecione pelo menos uma atividade.");
+      return;
+    }
+
+    $("adicionarParticipante").disabled = true;
+
+    try {
+      const { data: participante, error: erroParticipante } = await db
+        .from("participants")
+        .insert({ full_name: nome, active: true })
+        .select()
+        .single();
+
+      if (erroParticipante) throw erroParticipante;
+
+      const associacoes = selecionadas.map(activityId => ({
+        participant_id: participante.id,
+        activity_id: activityId
+      }));
+
+      const { error: erroAssociacao } = await db
+        .from("activity_participants")
+        .insert(associacoes);
+
+      if (erroAssociacao) {
+        throw new Error(
+          "O participante foi criado, mas não foi possível associá-lo às atividades: " +
+          erroAssociacao.message
+        );
+      }
+
+      $("nomeParticipante").value = "";
+      document.querySelectorAll(".atividade-checkbox")
+        .forEach(checkbox => checkbox.checked = false);
+
+      mostrarMensagem("Participante adicionado com sucesso.", "sucesso");
+
+      await mudarAtividade();
+
+    } catch (error) {
+      mostrarMensagem("Erro ao adicionar participante: " + error.message);
+    } finally {
+      $("adicionarParticipante").disabled = false;
+    }
+  }
+
+  async function sair() {
     await db.auth.signOut();
-
-    user = null;
-    profile = null;
-
-    document.getElementById("app").style.display = "none";
-    document.getElementById("login").style.display = "block";
-    document.getElementById("password").value = "";
-
-    message("Sessão terminada.");
-
-  } catch (error) {
-    message("Erro ao terminar sessão: " + error.message);
+    utilizador = null;
+    perfil = null;
+    atividades = [];
+    participantes = [];
+    $("app").style.display = "none";
+    $("login").style.display = "block";
+    $("password").value = "";
+    esconderMensagem();
   }
-}
 
-async function checkSession() {
-  try {
-    const { data, error } = await db.auth.getSession();
+  $("entrar").addEventListener("click", entrar);
+  $("sair").addEventListener("click", sair);
+  $("atividade").addEventListener("change", mudarAtividade);
+  $("data").addEventListener("change", mudarAtividade);
+  $("adicionarParticipante").addEventListener("click", adicionarParticipante);
 
-    if (error) {
-      message("Erro ao verificar sessão: " + error.message);
-      return;
-    }
+  $("data").value = hoje();
+</script>
 
-    if (data.session) {
-      await start(data.session.user);
-    }
-
-  } catch (error) {
-    message("Erro ao verificar sessão: " + error.message);
-  }
-}
-
-window.handleLogin = handleLogin;
-window.logout = logout;
-window.addParticipant = addParticipant;
-window.loadPeople = loadPeople;
-window.saveAttendance = saveAttendance;
-
-checkSession();
+</body>
+</html>
