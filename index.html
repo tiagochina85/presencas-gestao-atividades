@@ -77,10 +77,9 @@ Gestão de Atividades
 </main>
 
 <script>
-const URL="https://qkliymptliwfuqrajtuo.supabase.co";
-const KEY="sb_publishable_OenVWVbVkhzurI7PAURaAg_bA2dgA9i";
-const db=window.supabase.createClient(URL,KEY);
-
+const SUPABASE_URL = "https://qkliymptliwfuqrajtuo.supabase.co";
+const SUPABASE_KEY = "COLOQUE_AQUI_A_MESMA_CHAVE_ATUAL";
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let user=null,profile=null,activities=[],people=[],states={};
 
 function message(t){document.getElementById("message").textContent=t;}
