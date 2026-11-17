@@ -3,152 +3,284 @@
 <html lang="pt-PT">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Presenças – Gestão de Atividades</title>
-
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Presenças – Gestão de Atividades CMP</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
+    :root {
+      --azul: #174b72;
+      --azul-claro: #eaf2f8;
+      --verde: #21865b;
+      --vermelho: #bd4545;
+      --laranja: #bd811d;
+      --fundo: #f3f6fa;
+      --texto: #263545;
+    }
+
     * { box-sizing: border-box; }
 
     body {
       margin: 0;
-      padding: 20px;
       font-family: Arial, sans-serif;
-      background: #f3f5f8;
-      color: #222;
+      color: var(--texto);
+      background: var(--fundo);
     }
 
-    .container {
-      max-width: 950px;
-      margin: 0 auto;
+    header {
+      background: linear-gradient(120deg, #123c60, #247b87);
+      color: white;
+      padding: 25px 18px;
+      box-shadow: 0 3px 12px #0002;
     }
 
-    h1 { color: #174b72; }
+    .cabecalho {
+      max-width: 1100px;
+      margin: auto;
+    }
+
+    header h1 {
+      margin: 0 0 7px;
+      font-size: 25px;
+    }
+
+    header p {
+      margin: 0;
+      opacity: .9;
+    }
+
+    main {
+      max-width: 1100px;
+      margin: 24px auto;
+      padding: 0 15px 40px;
+    }
 
     .painel {
       background: white;
-      padding: 20px;
-      margin: 15px 0;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px #00000012;
+      border-radius: 14px;
+      padding: 22px;
+      margin-bottom: 18px;
+      box-shadow: 0 3px 15px #173b5b0d;
+      border: 1px solid #e6ebf0;
     }
 
-    input, select, button {
-      font-size: 16px;
-      padding: 12px;
-      border-radius: 7px;
+    h2 {
+      color: var(--azul);
+      margin-top: 0;
+      font-size: 20px;
+    }
+
+    h3 {
+      color: var(--azul);
+      font-size: 17px;
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin: 12px 0 6px;
     }
 
     input, select {
-      border: 1px solid #bbb;
       width: 100%;
-      margin: 7px 0 14px;
+      padding: 12px;
+      border: 1px solid #ccd5df;
+      border-radius: 8px;
+      font-size: 16px;
       background: white;
     }
 
     button {
       border: 0;
-      cursor: pointer;
+      border-radius: 8px;
+      padding: 11px 15px;
+      font-size: 14px;
       font-weight: bold;
+      cursor: pointer;
+      transition: opacity .15s;
     }
 
-    button:disabled {
-      opacity: .5;
-      cursor: not-allowed;
-    }
+    button:hover { opacity: .88; }
+    button:disabled { opacity: .5; cursor: wait; }
 
-    .botao-principal {
-      background: #176b9b;
+    .principal {
+      background: var(--azul);
       color: white;
-      width: 100%;
     }
 
-    .botao-sair {
-      background: #777;
-      color: white;
-      float: right;
+    .secundario {
+      background: #e8eef4;
+      color: var(--azul);
     }
 
-    .participante {
-      padding: 14px;
-      border: 1px solid #ddd;
-      border-radius: 9px;
+    .perigo {
+      background: #f9e6e6;
+      color: #9b2929;
+    }
+
+    .sucesso {
+      background: #e0f2e8;
+      color: #176b43;
+    }
+
+    .aviso {
+      background: #fff0d5;
+      color: #87580c;
+    }
+
+    .largura-total { width: 100%; }
+
+    .linha {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .linha > * { flex: 1; }
+
+    .topo-utilizador {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .cartao-utente {
+      border: 1px solid #e1e8ef;
+      border-radius: 11px;
+      padding: 15px;
       margin: 12px 0;
       background: #fff;
     }
 
-    .nome {
+    .nome-utente {
       font-size: 17px;
       font-weight: bold;
       margin-bottom: 12px;
     }
 
-    .botoes {
+    .botoes-presenca {
       display: flex;
       gap: 8px;
     }
 
-    .botoes button {
+    .botoes-presenca button {
       flex: 1;
-      color: white;
       min-width: 0;
-      padding: 12px 5px;
+      color: white;
+      padding: 13px 5px;
       font-size: 14px;
     }
 
-    .presenca { background: #218838; }
-    .falta { background: #c0392b; }
-    .justificada { background: #d18a00; }
+    .btn-presenca { background: var(--verde); }
+    .btn-falta { background: var(--vermelho); }
+    .btn-justificada { background: var(--laranja); }
 
-    .selecionado {
-      outline: 3px solid #222;
+    .marcado {
+      outline: 3px solid #24394b;
       outline-offset: 2px;
     }
 
+    .estado-guardado {
+      font-size: 12px;
+      margin-top: 10px;
+      color: #627386;
+    }
+
     .mensagem {
-      padding: 12px;
-      border-radius: 7px;
-      margin: 12px 0;
+      padding: 13px;
+      border-radius: 9px;
+      margin-bottom: 15px;
       display: none;
       white-space: pre-wrap;
     }
 
-    .erro { background: #ffe0e0; color: #8b0000; }
-    .sucesso { background: #dff5e4; color: #155724; }
-
-    .pequeno { color: #666; font-size: 14px; }
-
-    .atividade-opcao {
+    .mensagem.erro {
       display: block;
-      margin: 8px 0;
+      background: #fde5e5;
+      color: #8e2222;
     }
 
-    .atividade-opcao input {
+    .mensagem.ok {
+      display: block;
+      background: #e2f4e8;
+      color: #17653c;
+    }
+
+    .opcao-atividade {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 0;
+      font-weight: normal;
+    }
+
+    .opcao-atividade input {
       width: auto;
-      margin: 0 8px 0 0;
+      margin: 0;
+    }
+
+    .historico-item {
+      border-left: 4px solid #4b91a0;
+      background: #f7f9fb;
+      padding: 12px 14px;
+      border-radius: 5px;
+      margin: 10px 0;
+      overflow-wrap: anywhere;
+    }
+
+    .historico-item strong { color: var(--azul); }
+
+    .historico-item small {
+      color: #657487;
+      display: block;
+      margin-top: 5px;
+    }
+
+    .nota {
+      color: #64748b;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .separador {
+      border: 0;
+      border-top: 1px solid #e5ebf0;
+      margin: 20px 0;
     }
 
     #app { display: none; }
 
-    @media (max-width: 550px) {
-      body { padding: 10px; }
-      .painel { padding: 14px; }
-      .botoes { gap: 5px; }
-      .botoes button { font-size: 12px; padding: 12px 3px; }
+    @media (max-width: 600px) {
+      header h1 { font-size: 21px; }
+      main { margin-top: 14px; padding: 0 10px 25px; }
+      .painel { padding: 16px; }
+      .botoes-presenca { gap: 5px; }
+      .botoes-presenca button {
+        font-size: 11px;
+        padding: 12px 3px;
+      }
     }
   </style>
 </head>
 
 <body>
-<div class="container">
 
-  <h1>Presenças – Gestão de Atividades</h1>
+<header>
+  <div class="cabecalho">
+    <h1>Presenças – Gestão de Atividades CMP</h1>
+    <p>Registo e acompanhamento de atividades</p>
+  </div>
+</header>
 
+<main>
   <div id="mensagem" class="mensagem"></div>
 
   <section id="login" class="painel">
-    <h2>Entrar na aplicação</h2>
+    <h2>Bem-vindo</h2>
+    <p>Entre com as suas credenciais para continuar.</p>
 
     <label for="email">Email</label>
     <input id="email" type="email" placeholder="O seu email">
@@ -156,56 +288,110 @@
     <label for="password">Palavra-passe</label>
     <input id="password" type="password" placeholder="A sua palavra-passe">
 
-    <button id="entrar" class="botao-principal">Entrar</button>
+    <br><br>
+    <button id="entrar" class="principal largura-total">Entrar</button>
   </section>
 
-  <main id="app">
+  <div id="app">
 
     <section class="painel">
-      <button id="sair" class="botao-sair">Sair</button>
-      <h2 id="boasVindas">Bem-vindo</h2>
-      <p id="tipoConta" class="pequeno"></p>
+      <div class="topo-utilizador">
+        <div>
+          <strong id="nomeUtilizador">Utilizador</strong>
+          <div id="perfilUtilizador" class="nota"></div>
+        </div>
+        <button id="sair" class="secundario">Terminar sessão</button>
+      </div>
     </section>
 
     <section class="painel">
-      <h2>Registar presenças</h2>
+      <h2>Registo de presenças</h2>
 
       <label for="atividade">Atividade</label>
       <select id="atividade"></select>
 
-      <label for="data">Data</label>
+      <label for="data">Data do registo</label>
       <input id="data" type="date">
 
-      <p class="pequeno">
-        Escolha uma das três opções para cada participante.
-        Pode voltar a alterar o registo mais tarde.
+      <p class="nota">
+        Selecione Presença, Falta ou Falta justificada.
+        Os registos podem ser corrigidos posteriormente.
       </p>
 
-      <div id="listaParticipantes">
-        Selecione uma atividade.
+      <div id="listaParticipantes">A carregar...</div>
+    </section>
+
+    <section class="painel">
+      <h2>Histórico de alterações</h2>
+      <p class="nota">
+        Consulte quem registou ou alterou presenças e quando o fez.
+        O administrador pode consultar o histórico completo.
+      </p>
+      <button id="atualizarHistorico" class="secundario">
+        Atualizar histórico
+      </button>
+      <div id="listaHistorico"></div>
+    </section>
+
+    <section id="areaAdmin" class="painel" style="display:none">
+      <h2>Gestão de utentes</h2>
+      <p class="nota">
+        Pode adicionar utentes, alterar os seus nomes, gerir as atividades
+        e arquivar ou reativar utentes.
+      </p>
+
+      <h3>Adicionar novo utente</h3>
+
+      <label for="novoNome">Nome completo</label>
+      <input id="novoNome" type="text" placeholder="Nome do utente">
+
+      <label>Atividades a que pertence</label>
+      <div id="atividadesNovo"></div>
+
+      <button id="adicionarUtente" class="principal largura-total">
+        Adicionar utente
+      </button>
+
+      <hr class="separador">
+
+      <h3>Editar ou retirar utente</h3>
+
+      <label for="escolherUtente">Escolher utente</label>
+      <select id="escolherUtente">
+        <option value="">Selecione um utente</option>
+      </select>
+
+      <div id="edicaoUtente" style="display:none">
+        <label for="editarNome">Nome completo</label>
+        <input id="editarNome" type="text">
+
+        <label>Atividades atribuídas</label>
+        <div id="atividadesEditar"></div>
+
+        <div class="linha" style="margin-top:15px">
+          <button id="guardarEdicao" class="principal">
+            Guardar alterações
+          </button>
+          <button id="arquivarUtente" class="perigo">
+            Arquivar utente
+          </button>
+          <button id="reativarUtente" class="sucesso">
+            Reativar utente
+          </button>
+        </div>
+
+        <p class="nota">
+          Arquivar retira o utente das listas atuais, mas mantém o seu
+          histórico de presenças.
+        </p>
       </div>
     </section>
 
-    <section id="painelAdmin" class="painel" style="display:none">
-      <h2>Adicionar participante</h2>
-
-      <label for="nomeParticipante">Nome do participante</label>
-      <input id="nomeParticipante" type="text"
-             placeholder="Nome completo">
-
-      <p><strong>Atividades a que pertence:</strong></p>
-      <div id="listaAtividadesAdmin"></div>
-
-      <button id="adicionarParticipante" class="botao-principal">
-        Adicionar participante
-      </button>
-    </section>
-
-  </main>
-</div>
+  </div>
+</main>
 
 <script>
-  // CONFIGURAÇÃO DO SUPABASE
+  // CONFIGURAÇÃO SUPABASE
   const SUPABASE_URL = "https://qkliymptliwfuqrajtuo.supabase.co";
   const SUPABASE_KEY = "sb_publishable_OenVWVbVkhzurI7PAURaAg_bA2dgA9i";
 
@@ -219,38 +405,94 @@
   let atividades = [];
   let participantes = [];
   let registos = {};
-  let atividadeAtual = null;
+  let todosUtentes = [];
+  let utenteEmEdicao = null;
 
   const $ = id => document.getElementById(id);
 
-  function mostrarMensagem(texto, tipo = "erro") {
+  function mensagem(texto, tipo = "erro") {
     const caixa = $("mensagem");
     caixa.textContent = texto;
-    caixa.className = "mensagem " + tipo;
-    caixa.style.display = "block";
+    caixa.className = "mensagem " + (tipo === "ok" ? "ok" : "erro");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function esconderMensagem() {
-    $("mensagem").style.display = "none";
+  function limparMensagem() {
+    $("mensagem").className = "mensagem";
+    $("mensagem").textContent = "";
   }
 
-  function hoje() {
-    const agora = new Date();
-    const ano = agora.getFullYear();
-    const mes = String(agora.getMonth() + 1).padStart(2, "0");
-    const dia = String(agora.getDate()).padStart(2, "0");
-    return `${ano}-${mes}-${dia}`;
+  function dataHoje() {
+    const d = new Date();
+    return d.getFullYear() + "-" +
+      String(d.getMonth() + 1).padStart(2, "0") + "-" +
+      String(d.getDate()).padStart(2, "0");
+  }
+
+  function nomeAcao(acao) {
+    return {
+      INSERT: "Criou um registo",
+      UPDATE: "Alterou um registo",
+      DELETE: "Removeu uma associação ou registo"
+    }[acao] || acao;
+  }
+
+  function nomeTabela(tabela) {
+    return {
+      attendance: "Presenças",
+      participants: "Utentes",
+      activities: "Atividades",
+      activity_participants: "Associação de utentes às atividades"
+    }[tabela] || tabela;
+  }
+
+  function nomeEstado(estado) {
+    return {
+      presenca: "Presença",
+      falta: "Falta",
+      falta_justificada: "Falta justificada"
+    }[estado] || estado || "Não indicado";
+  }
+
+  function resumoAlteracao(registo) {
+    const antes = registo.old_data || {};
+    const depois = registo.new_data || {};
+
+    if (registo.table_name === "attendance") {
+      return "Estado: " +
+        nomeEstado(antes.status) + " → " +
+        nomeEstado(depois.status || antes.status);
+    }
+
+    if (registo.table_name === "participants") {
+      const nome = depois.full_name || antes.full_name || "Utente";
+      if (registo.action === "INSERT") return "Novo utente: " + nome;
+      if (registo.action === "DELETE") return "Utente removido: " + nome;
+      if (antes.full_name !== depois.full_name) {
+        return "Nome alterado: " + antes.full_name + " → " + depois.full_name;
+      }
+      if (antes.active !== depois.active) {
+        return depois.active ? "Utente reativado: " + nome : "Utente arquivado: " + nome;
+      }
+      return "Dados do utente alterados: " + nome;
+    }
+
+    if (registo.table_name === "activities") {
+      return "Atividade: " + (depois.name || antes.name || "Alteração");
+    }
+
+    if (registo.table_name === "activity_participants") {
+      return "Foi alterada a associação de um utente a uma atividade.";
+    }
+
+    return "Alteração registada.";
   }
 
   async function entrar() {
-    esconderMensagem();
+    limparMensagem();
 
-    const email = $("email").value.trim();
-    const password = $("password").value;
-
-    if (!email || !password) {
-      mostrarMensagem("Introduza o email e a palavra-passe.");
+    if (!$("email").value.trim() || !$("password").value) {
+      mensagem("Introduza o email e a palavra-passe.");
       return;
     }
 
@@ -258,33 +500,32 @@
 
     try {
       const { data, error } = await db.auth.signInWithPassword({
-        email,
-        password
+        email: $("email").value.trim(),
+        password: $("password").value
       });
 
       if (error) throw error;
 
       utilizador = data.user;
-
       await carregarPerfil();
       await carregarAtividades();
 
       $("login").style.display = "none";
       $("app").style.display = "block";
-      $("boasVindas").textContent =
-        "Bem-vindo" + (perfil.full_name ? ", " + perfil.full_name : "");
-
-      $("tipoConta").textContent =
+      $("nomeUtilizador").textContent =
+        perfil.full_name || utilizador.email;
+      $("perfilUtilizador").textContent =
         perfil.role === "admin" ? "Administrador" : "Colaborador";
 
-      $("painelAdmin").style.display =
+      $("areaAdmin").style.display =
         perfil.role === "admin" ? "block" : "none";
 
       if (perfil.role === "admin") {
-        mostrarAtividadesParaAdmin();
+        desenharAtividadesCheckboxes("atividadesNovo", []);
+        await carregarTodosUtentes();
       }
 
-      if (atividades.length > 0) {
+      if (atividades.length) {
         $("atividade").value = atividades[0].id;
         await mudarAtividade();
       } else {
@@ -292,8 +533,10 @@
           "Não tem atividades atribuídas.";
       }
 
-    } catch (error) {
-      mostrarMensagem("Não foi possível entrar: " + error.message);
+      await carregarHistorico();
+
+    } catch (e) {
+      mensagem("Não foi possível entrar: " + e.message);
     } finally {
       $("entrar").disabled = false;
     }
@@ -307,88 +550,94 @@
       .single();
 
     if (error) throw error;
-    if (!data) throw new Error("Não foi encontrado o perfil do utilizador.");
-
     perfil = data;
   }
 
   async function carregarAtividades() {
+    let dados;
+
     if (perfil.role === "admin") {
-      const { data, error } = await db
+      const resposta = await db
         .from("activities")
         .select("*")
         .eq("active", true)
         .order("name");
 
-      if (error) throw error;
-      atividades = data || [];
+      if (resposta.error) throw resposta.error;
+      dados = resposta.data || [];
 
     } else {
-      const { data, error } = await db
+      const resposta = await db
         .from("activity_assignments")
         .select("activity_id, activities(id, name, active)")
         .eq("user_id", utilizador.id);
 
-      if (error) throw error;
+      if (resposta.error) throw resposta.error;
 
-      atividades = (data || [])
+      dados = (resposta.data || [])
         .map(item => item.activities)
         .filter(item => item && item.active);
     }
 
-    const seletor = $("atividade");
-    seletor.innerHTML = "";
+    atividades = dados;
 
-    atividades.forEach(atividade => {
-      const opcao = document.createElement("option");
-      opcao.value = atividade.id;
-      opcao.textContent = atividade.name;
-      seletor.appendChild(opcao);
+    $("atividade").innerHTML = "";
+
+    atividades.forEach(a => {
+      const op = document.createElement("option");
+      op.value = a.id;
+      op.textContent = a.name;
+      $("atividade").appendChild(op);
     });
   }
 
-  function mostrarAtividadesParaAdmin() {
-    const caixa = $("listaAtividadesAdmin");
+  function desenharAtividadesCheckboxes(elemento, selecionadas) {
+    const caixa = $(elemento);
     caixa.innerHTML = "";
 
-    atividades.forEach(atividade => {
+    atividades.forEach(a => {
       const label = document.createElement("label");
-      label.className = "atividade-opcao";
+      label.className = "opcao-atividade";
 
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      checkbox.value = atividade.id;
-      checkbox.className = "atividade-checkbox";
+      const check = document.createElement("input");
+      check.type = "checkbox";
+      check.value = a.id;
+      check.checked = selecionadas.includes(a.id);
 
-      label.appendChild(checkbox);
-      label.appendChild(document.createTextNode(atividade.name));
+      label.appendChild(check);
+      label.appendChild(document.createTextNode(a.name));
       caixa.appendChild(label);
     });
   }
 
+  function atividadesSelecionadas(elemento) {
+    return Array.from(
+      $(elemento).querySelectorAll('input[type="checkbox"]:checked')
+    ).map(c => c.value);
+  }
+
   async function mudarAtividade() {
-    esconderMensagem();
+    limparMensagem();
+    const atividadeId = $("atividade").value;
 
-    atividadeAtual = $("atividade").value;
-
-    if (!atividadeAtual) {
-      $("listaParticipantes").textContent = "Não há atividade selecionada.";
+    if (!atividadeId) {
+      $("listaParticipantes").textContent = "Selecione uma atividade.";
       return;
     }
 
-    $("listaParticipantes").textContent = "A carregar participantes...";
+    $("listaParticipantes").textContent = "A carregar utentes...";
 
     try {
       const { data, error } = await db
         .from("activity_participants")
         .select("participant_id, participants(id, full_name, active)")
-        .eq("activity_id", atividadeAtual);
+        .eq("activity_id", atividadeId);
 
       if (error) throw error;
 
       participantes = (data || [])
         .map(item => item.participants)
-        .filter(item => item && item.active);
+        .filter(p => p && p.active);
 
       participantes.sort((a, b) =>
         a.full_name.localeCompare(b.full_name, "pt")
@@ -396,30 +645,27 @@
 
       await carregarRegistos();
       desenharParticipantes();
+      await carregarHistorico();
 
-    } catch (error) {
-      mostrarMensagem("Erro ao carregar participantes: " + error.message);
-      $("listaParticipantes").textContent =
-        "Não foi possível carregar a lista.";
+    } catch (e) {
+      $("listaParticipantes").textContent = "Não foi possível carregar a lista.";
+      mensagem("Erro ao carregar participantes: " + e.message);
     }
   }
 
   async function carregarRegistos() {
     registos = {};
 
-    const data = $("data").value;
-    if (!data) return;
-
-    const { data: dados, error } = await db
+    const { data, error } = await db
       .from("attendance")
       .select("*")
-      .eq("activity_id", atividadeAtual)
-      .eq("attendance_date", data);
+      .eq("activity_id", $("atividade").value)
+      .eq("attendance_date", $("data").value);
 
     if (error) throw error;
 
-    (dados || []).forEach(registo => {
-      registos[registo.participant_id] = registo.status;
+    (data || []).forEach(r => {
+      registos[r.participant_id] = r;
     });
   }
 
@@ -427,195 +673,396 @@
     const caixa = $("listaParticipantes");
     caixa.innerHTML = "";
 
-    if (participantes.length === 0) {
-      caixa.textContent = "Não existem participantes nesta atividade.";
+    if (!participantes.length) {
+      caixa.textContent = "Não existem utentes nesta atividade.";
       return;
     }
 
-    participantes.forEach(participante => {
-      const bloco = document.createElement("div");
-      bloco.className = "participante";
+    participantes.forEach(p => {
+      const cartao = document.createElement("div");
+      cartao.className = "cartao-utente";
 
       const nome = document.createElement("div");
-      nome.className = "nome";
-      nome.textContent = participante.full_name;
+      nome.className = "nome-utente";
+      nome.textContent = p.full_name;
 
       const botoes = document.createElement("div");
-      botoes.className = "botoes";
+      botoes.className = "botoes-presenca";
+
+      const estado = registos[p.id]?.status;
 
       const opcoes = [
-        { valor: "presenca", texto: "Presença", classe: "presenca" },
-        { valor: "falta", texto: "Falta", classe: "falta" },
-        {
-          valor: "falta_justificada",
-          texto: "Falta justificada",
-          classe: "justificada"
-        }
+        ["presenca", "Presença", "btn-presenca"],
+        ["falta", "Falta", "btn-falta"],
+        ["falta_justificada", "Falta justificada", "btn-justificada"]
       ];
 
-      opcoes.forEach(opcao => {
-        const botao = document.createElement("button");
-        botao.textContent = opcao.texto;
-        botao.className = opcao.classe;
+      opcoes.forEach(([valor, texto, classe]) => {
+        const b = document.createElement("button");
+        b.textContent = texto;
+        b.className = classe;
 
-        if (registos[participante.id] === opcao.valor) {
-          botao.classList.add("selecionado");
-        }
+        if (estado === valor) b.classList.add("marcado");
 
-        botao.addEventListener("click", () =>
-          guardarPresenca(participante.id, opcao.valor, bloco)
-        );
-
-        botoes.appendChild(botao);
+        b.addEventListener("click", () => guardarPresenca(p.id, valor));
+        botoes.appendChild(b);
       });
 
-      bloco.appendChild(nome);
-      bloco.appendChild(botoes);
-      caixa.appendChild(bloco);
+      const info = document.createElement("div");
+      info.className = "estado-guardado";
+
+      if (registos[p.id]) {
+        info.textContent = "Registo atual: " +
+          nomeEstado(registos[p.id].status);
+      } else {
+        info.textContent = "Ainda sem registo nesta data.";
+      }
+
+      cartao.appendChild(nome);
+      cartao.appendChild(botoes);
+      cartao.appendChild(info);
+      caixa.appendChild(cartao);
     });
   }
 
-  async function guardarPresenca(participanteId, estado, bloco) {
-    esconderMensagem();
+  async function guardarPresenca(participanteId, estado) {
+    limparMensagem();
 
     const data = $("data").value;
-    if (!data) {
-      mostrarMensagem("Escolha uma data.");
+    const atividadeId = $("atividade").value;
+
+    if (!data || !atividadeId) {
+      mensagem("Escolha uma atividade e uma data.");
       return;
     }
-
-    const botoes = bloco.querySelectorAll("button");
-    botoes.forEach(botao => botao.disabled = true);
 
     try {
       const { data: existentes, error: erroConsulta } = await db
         .from("attendance")
         .select("id")
         .eq("participant_id", participanteId)
-        .eq("activity_id", atividadeAtual)
+        .eq("activity_id", atividadeId)
         .eq("attendance_date", data)
         .limit(1);
 
       if (erroConsulta) throw erroConsulta;
 
-      const registo = {
-        participant_id: participanteId,
-        activity_id: atividadeAtual,
-        attendance_date: data,
+      let resposta;
+
+      const valores = {
         status: estado,
         present: estado === "presenca",
         created_by: utilizador.id
       };
 
-      let resultado;
-
-      if (existentes && existentes.length > 0) {
-        resultado = await db
+      if (existentes && existentes.length) {
+        resposta = await db
           .from("attendance")
-          .update({
-            status: registo.status,
-            present: registo.present,
-            created_by: registo.created_by
-          })
+          .update(valores)
           .eq("id", existentes[0].id);
       } else {
-        resultado = await db
+        resposta = await db
           .from("attendance")
-          .insert(registo);
+          .insert({
+            participant_id: participanteId,
+            activity_id: atividadeId,
+            attendance_date: data,
+            ...valores
+          });
       }
 
-      if (resultado.error) throw resultado.error;
+      if (resposta.error) throw resposta.error;
 
-      registos[participanteId] = estado;
-      desenharParticipantes();
-      mostrarMensagem("Registo guardado com sucesso.", "sucesso");
+      mensagem("Registo guardado com sucesso.", "ok");
+      await mudarAtividade();
 
-    } catch (error) {
-      mostrarMensagem("Não foi possível guardar: " + error.message);
-      botoes.forEach(botao => botao.disabled = false);
+    } catch (e) {
+      mensagem("Não foi possível guardar a presença: " + e.message);
     }
   }
 
-  async function adicionarParticipante() {
-    esconderMensagem();
-
-    const nome = $("nomeParticipante").value.trim();
-
-    const selecionadas = Array.from(
-      document.querySelectorAll(".atividade-checkbox:checked")
-    ).map(checkbox => checkbox.value);
-
-    if (!nome) {
-      mostrarMensagem("Escreva o nome do participante.");
-      return;
-    }
-
-    if (selecionadas.length === 0) {
-      mostrarMensagem("Selecione pelo menos uma atividade.");
-      return;
-    }
-
-    $("adicionarParticipante").disabled = true;
+  async function carregarHistorico() {
+    const caixa = $("listaHistorico");
+    caixa.innerHTML = "A carregar histórico...";
 
     try {
-      const { data: participante, error: erroParticipante } = await db
+      let consulta = db
+        .from("audit_logs")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      // O administrador consulta tudo.
+      // As regras de segurança do Supabase limitam os colaboradores
+      // às alterações de presenças das atividades que lhes foram atribuídas.
+      const { data, error } = await consulta;
+
+      if (error) throw error;
+
+      caixa.innerHTML = "";
+
+      if (!data || !data.length) {
+        caixa.textContent = "Ainda não existem alterações registadas.";
+        return;
+      }
+
+      data.forEach(r => {
+        const item = document.createElement("div");
+        item.className = "historico-item";
+
+        const titulo = document.createElement("strong");
+        titulo.textContent = r.actor_name || "Utilizador não identificado";
+
+        const detalhe = document.createElement("div");
+        detalhe.textContent =
+          nomeAcao(r.action) + " — " +
+          nomeTabela(r.table_name);
+
+        const resumo = document.createElement("div");
+        resumo.textContent = resumoAlteracao(r);
+
+        const hora = document.createElement("small");
+        hora.textContent = new Date(r.created_at).toLocaleString("pt-PT");
+
+        item.appendChild(titulo);
+        item.appendChild(detalhe);
+        item.appendChild(resumo);
+        item.appendChild(hora);
+
+        caixa.appendChild(item);
+      });
+
+    } catch (e) {
+      caixa.textContent = "Não foi possível consultar o histórico: " + e.message;
+    }
+  }
+
+  async function carregarTodosUtentes() {
+    const { data, error } = await db
+      .from("participants")
+      .select("*")
+      .order("full_name");
+
+    if (error) throw error;
+
+    todosUtentes = data || [];
+
+    $("escolherUtente").innerHTML =
+      '<option value="">Selecione um utente</option>';
+
+    todosUtentes.forEach(p => {
+      const op = document.createElement("option");
+      op.value = p.id;
+      op.textContent = p.full_name + (p.active ? "" : " (Arquivado)");
+      $("escolherUtente").appendChild(op);
+    });
+  }
+
+  async function adicionarUtente() {
+    limparMensagem();
+
+    const nome = $("novoNome").value.trim();
+    const selecionadas = atividadesSelecionadas("atividadesNovo");
+
+    if (!nome) {
+      mensagem("Introduza o nome do utente.");
+      return;
+    }
+
+    if (!selecionadas.length) {
+      mensagem("Selecione pelo menos uma atividade.");
+      return;
+    }
+
+    $("adicionarUtente").disabled = true;
+
+    try {
+      const { data: novo, error } = await db
         .from("participants")
         .insert({ full_name: nome, active: true })
         .select()
         .single();
 
-      if (erroParticipante) throw erroParticipante;
+      if (error) throw error;
 
       const associacoes = selecionadas.map(activityId => ({
-        participant_id: participante.id,
+        participant_id: novo.id,
         activity_id: activityId
       }));
 
-      const { error: erroAssociacao } = await db
+      const { error: erroAssociacoes } = await db
         .from("activity_participants")
         .insert(associacoes);
 
-      if (erroAssociacao) {
+      if (erroAssociacoes) {
         throw new Error(
-          "O participante foi criado, mas não foi possível associá-lo às atividades: " +
-          erroAssociacao.message
+          "O utente foi criado, mas ocorreu um problema ao associar atividades: " +
+          erroAssociacoes.message
         );
       }
 
-      $("nomeParticipante").value = "";
-      document.querySelectorAll(".atividade-checkbox")
-        .forEach(checkbox => checkbox.checked = false);
-
-      mostrarMensagem("Participante adicionado com sucesso.", "sucesso");
-
+      $("novoNome").value = "";
+      desenharAtividadesCheckboxes("atividadesNovo", []);
+      await carregarTodosUtentes();
       await mudarAtividade();
+      await carregarHistorico();
 
-    } catch (error) {
-      mostrarMensagem("Erro ao adicionar participante: " + error.message);
+      mensagem("Utente adicionado com sucesso.", "ok");
+
+    } catch (e) {
+      mensagem("Erro ao adicionar utente: " + e.message);
     } finally {
-      $("adicionarParticipante").disabled = false;
+      $("adicionarUtente").disabled = false;
+    }
+  }
+
+  async function selecionarUtente() {
+    const id = $("escolherUtente").value;
+    utenteEmEdicao = todosUtentes.find(p => p.id === id);
+
+    if (!utenteEmEdicao) {
+      $("edicaoUtente").style.display = "none";
+      return;
+    }
+
+    $("edicaoUtente").style.display = "block";
+    $("editarNome").value = utenteEmEdicao.full_name;
+
+    const { data, error } = await db
+      .from("activity_participants")
+      .select("activity_id")
+      .eq("participant_id", id);
+
+    if (error) {
+      mensagem("Não foi possível carregar as atividades do utente: " + error.message);
+      return;
+    }
+
+    const ids = (data || []).map(x => x.activity_id);
+    desenharAtividadesCheckboxes("atividadesEditar", ids);
+
+    $("arquivarUtente").style.display =
+      utenteEmEdicao.active ? "inline-block" : "none";
+
+    $("reativarUtente").style.display =
+      utenteEmEdicao.active ? "none" : "inline-block";
+  }
+
+  async function guardarEdicaoUtente() {
+    if (!utenteEmEdicao) return;
+
+    limparMensagem();
+
+    const nome = $("editarNome").value.trim();
+    const selecionadas = atividadesSelecionadas("atividadesEditar");
+
+    if (!nome) {
+      mensagem("O nome do utente não pode ficar vazio.");
+      return;
+    }
+
+    try {
+      const { error: erroNome } = await db
+        .from("participants")
+        .update({ full_name: nome })
+        .eq("id", utenteEmEdicao.id);
+
+      if (erroNome) throw erroNome;
+
+      const { error: erroApagar } = await db
+        .from("activity_participants")
+        .delete()
+        .eq("participant_id", utenteEmEdicao.id);
+
+      if (erroApagar) throw erroApagar;
+
+      if (selecionadas.length) {
+        const associacoes = selecionadas.map(activityId => ({
+          participant_id: utenteEmEdicao.id,
+          activity_id: activityId
+        }));
+
+        const { error: erroAdicionar } = await db
+          .from("activity_participants")
+          .insert(associacoes);
+
+        if (erroAdicionar) throw erroAdicionar;
+      }
+
+      await carregarTodosUtentes();
+      $("escolherUtente").value = utenteEmEdicao.id;
+      await selecionarUtente();
+      await mudarAtividade();
+      await carregarHistorico();
+
+      mensagem("Alterações guardadas com sucesso.", "ok");
+
+    } catch (e) {
+      mensagem("Erro ao guardar alterações: " + e.message);
+    }
+  }
+
+  async function alterarEstadoUtente(ativo) {
+    if (!utenteEmEdicao) return;
+
+    const acao = ativo ? "reativar" : "arquivar";
+
+    if (!confirm("Tem a certeza de que pretende " + acao + " este utente?")) {
+      return;
+    }
+
+    try {
+      const { error } = await db
+        .from("participants")
+        .update({ active: ativo })
+        .eq("id", utenteEmEdicao.id);
+
+      if (error) throw error;
+
+      await carregarTodosUtentes();
+      $("escolherUtente").value = utenteEmEdicao.id;
+      await selecionarUtente();
+      await mudarAtividade();
+      await carregarHistorico();
+
+      mensagem(
+        ativo ? "Utente reativado." : "Utente arquivado. O histórico foi mantido.",
+        "ok"
+      );
+
+    } catch (e) {
+      mensagem("Não foi possível alterar o estado do utente: " + e.message);
     }
   }
 
   async function sair() {
     await db.auth.signOut();
+
     utilizador = null;
     perfil = null;
     atividades = [];
     participantes = [];
+    registos = {};
+
     $("app").style.display = "none";
     $("login").style.display = "block";
     $("password").value = "";
-    esconderMensagem();
+    $("listaHistorico").innerHTML = "";
+    limparMensagem();
   }
 
   $("entrar").addEventListener("click", entrar);
   $("sair").addEventListener("click", sair);
   $("atividade").addEventListener("change", mudarAtividade);
   $("data").addEventListener("change", mudarAtividade);
-  $("adicionarParticipante").addEventListener("click", adicionarParticipante);
+  $("adicionarUtente").addEventListener("click", adicionarUtente);
+  $("escolherUtente").addEventListener("change", selecionarUtente);
+  $("guardarEdicao").addEventListener("click", guardarEdicaoUtente);
+  $("arquivarUtente").addEventListener("click", () => alterarEstadoUtente(false));
+  $("reativarUtente").addEventListener("click", () => alterarEstadoUtente(true));
+  $("atualizarHistorico").addEventListener("click", carregarHistorico);
 
-  $("data").value = hoje();
+  $("data").value = dataHoje();
 </script>
 
 </body>
