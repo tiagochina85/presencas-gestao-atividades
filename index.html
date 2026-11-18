@@ -1146,11 +1146,17 @@ async function adicionarColaborador() {
   });
 
   if (error || !data?.success) {
-    mensagem.textContent = "Não foi possível adicionar: " +
-      (data?.error || error?.message || "Erro desconhecido.");
-    return;
-  }
+  console.error("Erro ao adicionar colaborador:", error, data);
 
+  mensagem.textContent = "Erro: " +
+    (data?.error ||
+     error?.message ||
+     error?.context?.message ||
+     JSON.stringify(data) ||
+     "Sem resposta do servidor.");
+
+  return;
+}
   mensagem.textContent = "Convite enviado com sucesso para " + email + ".";
   document.getElementById("colaboradorNome").value = "";
   document.getElementById("colaboradorEmail").value = "";
