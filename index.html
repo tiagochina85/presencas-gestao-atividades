@@ -1144,8 +1144,11 @@ async function adicionarColaborador() {
       activity_ids: atividadeIds
     }
   });
-
-  if (error || !data?.success) {
+console.log("Resposta da função:", {
+  data,
+  error,
+  contexto: error?.context
+});  if (error || !data?.success) {
   console.error("Erro ao adicionar colaborador:", error, data);
 
   mensagem.textContent = "Erro: " +
