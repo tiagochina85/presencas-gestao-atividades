@@ -541,7 +541,9 @@
 
       $("areaAdmin").style.display =
         perfil.role === "admin" ? "block" : "none";
-
+      if (perfil.role === "admin") {
+    carregarAtividadesColaborador();
+      }
       if (perfil.role === "admin") {
         desenharAtividadesCheckboxes("atividadesNovo", []);
         await carregarTodosUtentes();
