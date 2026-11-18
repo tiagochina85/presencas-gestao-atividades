@@ -385,6 +385,28 @@
           histórico de presenças.
         </p>
       </div>
+      
+<hr class="separador">
+
+<h2>Gestão de colaboradores</h2>
+<p class="nota">
+  Adicionar colaboradores e escolher as atividades a que têm acesso.
+</p>
+
+<label for="colaboradorNome">Nome completo</label>
+<input id="colaboradorNome" type="text" placeholder="Nome do colaborador">
+
+<label for="colaboradorEmail">Email</label>
+<input id="colaboradorEmail" type="email" placeholder="email@exemplo.pt">
+
+<h3>Atividades atribuídas</h3>
+<div id="colaboradorAtividades"></div>
+
+<button type="button" id="btnAdicionarColaborador" class="principal largura-total">
+  Enviar convite ao colaborador
+</button>
+
+<p id="mensagemColaborador" class="nota"></p>
     </section>
 
   </div>
@@ -1064,6 +1086,77 @@
 
   $("data").value = dataHoje();
 </script>
+  
+<script>
+async function carregarAtividadesColaborador() {
+  const zona = document.getElementById("colaboradorAtividades");
+  if (!zona) return;
 
+  const { data, error } = await db
+    .from("activities")
+    .select("id, name")
+    .eq("active", true)
+    .order("name");
+
+  if (error) {
+    zona.textContent = "Erro ao carregar atividades: " + error.message;
+    return;
+  }
+
+  zona.innerHTML = "";
+
+  data.forEach(atividade => {
+    const linha = document.createElement("label");
+    linha.style.display = "block";
+
+    const caixa = document.createElement("input");
+    caixa.type = "checkbox";
+    caixa.value = atividade.id;
+    caixa.className = "atividade-colaborador";
+
+    linha.appendChild(caixa);
+    linha.appendChild(document.createTextNode(" " + atividade.name));
+    zona.appendChild(linha);
+  });
+}
+
+async function adicionarColaborador() {
+  const nome = document.getElementById("colaboradorNome").value.trim();
+  const email = document.getElementById("colaboradorEmail").value.trim();
+  const mensagem = document.getElementById("mensagemColaborador");
+  const atividadeIds = Array.from(
+    document.querySelectorAll(".atividade-colaborador:checked")
+  ).map(caixa => caixa.value);
+
+  if (!nome || !email || atividadeIds.length === 0) {
+    mensagem.textContent = "Preencha o nome, o email e escolha pelo menos uma atividade.";
+    return;
+  }
+
+  mensagem.textContent = "A enviar convite...";
+
+  const { data, error } = await db.functions.invoke("gerir-colaboradores", {
+    body: {
+      full_name: nome,
+      email: email,
+      activity_ids: atividadeIds
+    }
+  });
+
+  if (error || !data?.success) {
+    mensagem.textContent = "Não foi possível adicionar: " +
+      (data?.error || error?.message || "Erro desconhecido.");
+    return;
+  }
+
+  mensagem.textContent = "Convite enviado com sucesso para " + email + ".";
+  document.getElementById("colaboradorNome").value = "";
+  document.getElementById("colaboradorEmail").value = "";
+  document.querySelectorAll(".atividade-colaborador").forEach(c => c.checked = false);
+}
+
+document.getElementById("btnAdicionarColaborador")
+  ?.addEventListener("click", adicionarColaborador);
+</script>
 </body>
 </html>
